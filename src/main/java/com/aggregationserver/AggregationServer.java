@@ -15,11 +15,11 @@ import java.util.concurrent.TimeUnit;
  */
 public class AggregationServer {
 
-    private static final String FILE_PATH = "weatherData.json";  // Path to persist weather data
-    private static final int MAX_ENTRIES = 20;  // Maximum number of weather data entries to store
-    private static final int EXPIRATION_TIME = 30;  // Time in seconds after which entries expire
-    private static Map<String, WeatherEntry> weatherData = new LinkedHashMap<>();  // Store weather data with timestamps
-    private static LamportClock lamportClock = new LamportClock();  // Lamport clock for synchronization
+    protected static final String FILE_PATH = "weatherData.json";  // Path to persist weather data
+    protected static final int MAX_ENTRIES = 20;  // Maximum number of weather data entries to store
+    protected static final int EXPIRATION_TIME = 30;  // Time in seconds after which entries expire
+    protected static Map<String, WeatherEntry> weatherData = new LinkedHashMap<>();  // Store weather data with timestamps
+    protected static LamportClock lamportClock = new LamportClock();  // Lamport clock for synchronization
 
     public static void main(String[] args) {
         int port = args.length > 0 ? Integer.parseInt(args[0]) : 4567;
@@ -76,7 +76,7 @@ public class AggregationServer {
      * @param requestLine The full HTTP GET request line
      * @return The station ID as a string if found, otherwise null
      */
-    private static String extractStationIDFromRequest(String requestLine) {
+    protected static String extractStationIDFromRequest(String requestLine) {
         String[] requestParts = requestLine.split(" ");
         if (requestParts.length > 1) {
             String path = requestParts[1];  // Example: /weather/IDS60901
@@ -95,7 +95,7 @@ public class AggregationServer {
      * @param out       PrintWriter to send the HTTP response to the client
      * @param stationID Station ID to retrieve data for (optional)
      */
-    private static void handleGetRequest(PrintWriter out, String stationID) {
+    protected static void handleGetRequest(PrintWriter out, String stationID) {
         try {
             System.out.println("Received GET request for stationID: " + stationID);
             String responseBody;
@@ -136,7 +136,7 @@ public class AggregationServer {
      * Retrieves all weather data and converts it to a JSON string.
      * @return JSON string containing all weather data
      */
-    private static String getAllWeatherDataAsJson() {
+    protected static String getAllWeatherDataAsJson() {
         Map<String, Object> allWeatherData = new LinkedHashMap<>();
         for (Map.Entry<String, WeatherEntry> entry : weatherData.entrySet()) {
             allWeatherData.put(entry.getKey(), entry.getValue().data);
@@ -152,7 +152,7 @@ public class AggregationServer {
      * @param out PrintWriter to send the HTTP response
      * @throws IOException If an I/O error occurs
      */
-    private static void handlePutRequest(BufferedReader in, PrintWriter out) throws IOException {
+    protected static void handlePutRequest(BufferedReader in, PrintWriter out) throws IOException {
         String line;
         int contentLength = 0;
         StringBuilder jsonString = new StringBuilder();
@@ -184,7 +184,7 @@ public class AggregationServer {
      * @param jsonString JSON string representing the new weather data
      * @param out        PrintWriter to send the HTTP response
      */
-    private static void processPutRequest(String jsonString, PrintWriter out) {
+    protected static void processPutRequest(String jsonString, PrintWriter out) {
         try {
             JSONParser parser = new JSONParser();
             Map<String, Object> newWeatherData = (Map<String, Object>) parser.parse(jsonString);
@@ -221,7 +221,7 @@ public class AggregationServer {
      * Ensures that the number of weather entries does not exceed the maximum limit.
      * If the limit is exceeded, the oldest entry is removed.
      */
-    private static void maintainMaxEntries() {
+    protected static void maintainMaxEntries() {
         if (weatherData.size() > MAX_ENTRIES) {
             String oldestEntryId = weatherData.keySet().iterator().next();
             System.out.println("Removing oldest entry: " + oldestEntryId);
@@ -233,7 +233,7 @@ public class AggregationServer {
      * Loads weather data from a JSON file into the weatherData map.
      * If the file does not exist or cannot be read, the method logs an error.
      */
-    private static void loadDataFromFile() {
+    protected static void loadDataFromFile() {
         File file = new File(FILE_PATH);
         if (file.exists()) {
             try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
@@ -266,7 +266,7 @@ public class AggregationServer {
      * Saves weather data to a JSON file, ensuring atomic write with a temporary file.
      * Data is sorted by Lamport clock values in descending order before saving.
      */
-    private static void saveDataToFile() throws IOException {
+    protected static void saveDataToFile() throws IOException {
         File tempFile = new File(FILE_PATH + ".tmp");
         File originalFile = new File(FILE_PATH);
 
@@ -305,7 +305,7 @@ public class AggregationServer {
      * Removes weather data entries that have not been updated within the expiration time (30 seconds).
      * The method checks the timestamps of each entry and deletes expired entries.
      */
-    private static void removeExpiredEntries() {
+    protected static void removeExpiredEntries() {
         long currentTime = System.currentTimeMillis();
         Iterator<Map.Entry<String, WeatherEntry>> iterator = weatherData.entrySet().iterator();
         boolean entriesRemoved = false;

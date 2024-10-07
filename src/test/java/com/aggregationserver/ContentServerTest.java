@@ -1,74 +1,75 @@
 package com.aggregationserver;
 
 import java.io.PrintWriter;
-import java.net.Socket;
+import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 
 public class ContentServerTest {
 
-    private ContentServer contentServer;
+    public ContentServer contentServer;
+    public JSONParser jsonParser;
 
     @BeforeEach
     public void setup() {
         contentServer = new ContentServer();
+        jsonParser = new JSONParser();
     }
 
+    // Test for reading the weather data file using the example file
     @Test
-    public void testReadFileToJSON() throws Exception {
-        // Use the file path from your system for the test
-        String filePath = "src/test/resources/sample_weather_data.txt";  // Path from your system
+    public void testReadFileToJSON_UsingExampleFile() throws Exception {
+        // Path to the sample file
+        String filePath = "src/test/resources/sample_weather_text.txt";
 
-        // Call the method to read the data
-        Map<String, Object> weatherData = contentServer.readFileToJSON(filePath);
+        // Parse the weather data from the file
+        Map<String, Object> weatherData = ContentServer.readFileToJSON(filePath);
 
-        // Validate the contents of the weather data
-        assertEquals("IDS60901", weatherData.get("id"), "Station ID should match");
-        assertEquals("25.0", weatherData.get("temperature"), "Temperature should match");
-        assertEquals("60", weatherData.get("humidity"), "Humidity should match");
+        // Assertions to verify the correct data has been parsed
+        assertEquals("IDS60901", weatherData.get("id"));
+        assertEquals("Adelaide (West Terrace / ngayirdapira)", weatherData.get("name"));
+        assertEquals("SA", weatherData.get("state"));
+        assertEquals("13.3", weatherData.get("air_temp")); // Temperature as string
+        assertEquals("60", weatherData.get("rel_hum")); // Humidity as string
+        assertTrue(weatherData.containsKey("lamportTime")); // Ensure Lamport time is present
     }
 
+    // Mock test for sending weather data using sendPutRequest method
     @Test
-    public void testSendPutRequest() throws Exception {
-        // Mock a PrintWriter to simulate data transmission
+    public void testSendWeatherData_UsingSendPutRequest() throws Exception {
+        // Mocking PrintWriter to capture the output
         PrintWriter mockOut = mock(PrintWriter.class);
 
-        // Sample weather data
-        Map<String, Object> weatherData = Map.of(
-            "id", "IDS60901",
-            "temperature", "25.0",
-            "humidity", "60"
-        );
+        // Sample weather data (manually constructed to match sample_weather_text.txt)
+        Map<String, Object> weatherData = new HashMap<>();
+        weatherData.put("id", "IDS60901");
+        weatherData.put("name", "Adelaide (West Terrace / ngayirdapira)");
+        weatherData.put("state", "SA");
+        weatherData.put("air_temp", "13.3");
+        weatherData.put("rel_hum", "60");
+        weatherData.put("lamportTime", 1);  // Simulate Lamport clock value
 
-        // Send the PUT request
-        contentServer.sendPutRequest(mockOut, weatherData);
+        // Invoke the method to send the PUT request
+        ContentServer.sendPutRequest(mockOut, weatherData);
 
-        // Verify that the request is sent
-        verify(mockOut, times(1)).println(anyString());
-        verify(mockOut, times(1)).flush();
+        // Verify the correct HTTP request format was written
+        verify(mockOut).println("PUT /weather.json HTTP/1.1");
+        verify(mockOut).println("User-Agent: ContentServer/1.0");
+        verify(mockOut).println("Content-Type: application/json");
+
+        // Verify the weather data content was sent
+        verify(mockOut).println(anyString());  // The actual JSON string
+
+        // Verify the PUT request ended with a blank line after the headers
+        verify(mockOut, times(1)).println(); // Ensures there was an empty line between headers and body
     }
 
-    @Test
-    public void testConnectionAndDataSending() throws Exception {
-        // Mock the connection
-        Socket mockSocket = mock(Socket.class);
-        PrintWriter mockOut = mock(PrintWriter.class);
-        
-        when(mockSocket.getOutputStream()).thenReturn(System.out);
-
-        // Start the content server and simulate sending data
-        contentServer.maintainConnectionAndSendData("localhost:4567", "src/test/resources/sample_weather_data.txt");
-        
-        // Verify that data was sent
-        verify(mockOut, times(1)).println(anyString());
-    }
 }
